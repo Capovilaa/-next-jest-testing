@@ -138,6 +138,47 @@ A primeira coisa após ter sua task/componente/funcionalidade desenvolvida, e vo
 
 - Caso o seu arquivo não esteja sendo carregado nos testes, talvez seja necessário fazer uma configuração extra em `jest.config.ts` para que o Jest possa encontrar o seu arquivo/extensões de arquivos.
 
+- É possível mockar atributos parciais de um módulo com Jest, podemos fazer isso da seguinte maneira:
+
+  ```bash
+  # arquivo original que será testado
+  //foo-bar-baz.js
+  export const foo = 'foo';
+  export const bar = () => 'bar';
+  export default () => 'baz';
+  ```
+
+  Agora nós vamos mockar apenas `foo` e o `defaultExport`, que nesse caso possui o valor `baz`.
+
+  ```bash
+  # arquivo de teste
+  //test.js
+  import defaultExport, {bar, foo} from '../foo-bar-baz';
+
+  jest.mock('../foo-bar-baz', () => {
+    const originalModule = jest.requireActual('../foo-bar-baz');
+
+    //Mock the default export and named export 'foo'
+    return {
+      __esModule: true,
+      ...originalModule,
+      default: jest.fn(() => 'mocked baz'),
+      foo: 'mocked foo',
+    };
+  });
+
+  test('should do a partial mock', () => {
+    const defaultExportResult = defaultExport();
+    expect(defaultExportResult).toBe('mocked baz');
+    expect(defaultExport).toHaveBeenCalled();
+
+    expect(foo).toBe('mocked foo');
+    expect(bar()).toBe('bar');
+  });
+  ```
+
+  Como é possível ver acima, nós mockamos todo o módulo `../foo-bar-baz` usando o `jest.requireActual` que obtém o módulo atual, setamo o `__esModule` como `true` para que não ocorra problemas no padrão de exportação ES Modules. Alteramos o `defaultExport`para o valor desejado, assim como a propriedade `foo`. Em seguida nossos testes validam se essas alterações foram realizadas com sucesso.
+
 ## Principais ferramentas para testes
 
 As duas principais ferramentas usadas para testes em geral em stacks Next e React são **Jest** e **Cypress**, vamos abordar cada uma delas e em quais tipos de testes elas melhores se encaixam.
@@ -193,9 +234,9 @@ export default createJestConfig(config);
 
 Feito isso, as outras configurações são apenas opcionais.
 
-### Cypress
+## Virtual enviroments (.env)
 
-## Virtual enviroments testes
+É de suma importância configurar os `.env` para os diferentes tipos de ambientes, sendo eles de development, test e production. Isso será controlado através do `NODE_ENV` que reconhece qual virtual enviroment deve ser carregado. Um ponto importante é que as variáveis de ambiente em produção e desenvolvimento não serão carregadas em ambiente de teste. *"Apart from development and production environments, there is a 3rd option available: test. In the same way you can set defaults for development or production environments, you can do the same with a `.env.test` file for the testing environment (though this one is not as common as the previous two). Next.js will not load environment variables from `.env.development` or `.env.production` in the testing environment."*
 
 ## Como rodar um teste
 
@@ -210,6 +251,7 @@ Para rodar um teste, podemos configurar alguns scripts no `package.json` para qu
     "test:ci": "jest --ci"
   },
 ```
+
 Rodando o comando "test" ele automaticamente já fica no modo `watch`, que consegue ficar observando mudanças, toda vez que alguma acontecer, ele roda os testes novamente. Isso fica a critério do desenvolvedor de colocar ou não essa flag.
 
 Ainda temos o modo `coverage`que nos fornece detalhes em tabela sobre os testes, podemos conseguir isso rodando o seguinte comando:
@@ -218,3 +260,5 @@ Ainda temos o modo `coverage`que nos fornece detalhes em tabela sobre os testes,
 # roda em modo de coverage
 pnpm test -- --coverage
 ```
+
+### Cypress
